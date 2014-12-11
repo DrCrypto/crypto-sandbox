@@ -170,7 +170,7 @@ public:
 
         if(inModel)
         {
-            OutputDebugStringF("Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model\n");
+            LogPrintf("Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model\n");
         }else{
             parent->beginInsertRows(QModelIndex(), lowerIndex, lowerIndex);
             cachedAddressTable.insert(lowerIndex, AddressTableEntry(newEntryType, label, address));

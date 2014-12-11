@@ -100,6 +100,7 @@ QT_FORMS_UI = \
   forms/rpcconsole.ui \
   forms/sendcoinsdialog.ui \
   forms/sendcoinsentry.ui \
+  forms/stealthaddressdialog.ui \
   forms/signverifymessagedialog.ui \
   forms/transactiondescdialog.ui
 
@@ -136,6 +137,7 @@ QT_MOC_CPP = \
   moc_sendcoinsdialog.cpp \
   moc_sendcoinsentry.cpp \
   moc_signverifymessagedialog.cpp \
+  moc_stealthaddressdialog.cpp \
   moc_splashscreen.cpp \
   moc_trafficgraphwidget.cpp \
   moc_transactiondesc.cpp \
@@ -202,6 +204,7 @@ BITCOIN_QT_H = \
   signverifymessagedialog.h \
   splashscreen.h \
   stealth.h \
+  stealthaddressdialog.h \
   trafficgraphwidget.h \
   transactiondesc.h \
   transactiondescdialog.h \
@@ -279,7 +282,6 @@ BITCOIN_QT_CPP = \
   qvaluecombobox.cpp \
   rpcconsole.cpp \
   splashscreen.cpp \
-  stealth.cpp \
   trafficgraphwidget.cpp \
   utilitydialog.cpp \
   winshutdownmonitor.cpp
@@ -302,6 +304,7 @@ BITCOIN_QT_CPP += \
   sendcoinsdialog.cpp \
   sendcoinsentry.cpp \
   signverifymessagedialog.cpp \
+  stealthaddressdialog.cpp \
   transactiondesc.cpp \
   transactiondescdialog.cpp \
   transactionfilterproxy.cpp \

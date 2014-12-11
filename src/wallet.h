@@ -263,15 +263,15 @@ public:
     int64_t GetBalance() const;
     int64_t GetUnconfirmedBalance() const;
     int64_t GetImmatureBalance() const;
-    bool CreateTransaction(const std::vector<std::pair<std::pair<std::pair<CScript, int64>, ec_secret>, bool>>& vecSend,
+    bool CreateTransaction(const std::vector<std::pair<std::pair<std::pair<CScript, int64_t>, ec_secret>, bool>>& vecSend,
                            CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
-    bool CreateTransaction(CScript scriptPubKey, int64 nValue, bool isStealthAddressTx,
-                           CWalletTx& wtxNew, CReserveKey& reservekey, int64& nFeeRet, std::string& strFailReason, ec_secret ecSecret, const CCoinControl *coinControl=NULL);
+    bool CreateTransaction(CScript scriptPubKey, int64_t nValue, bool isStealthAddressTx,
+                           CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, ec_secret ecSecret, const CCoinControl *coinControl=NULL);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
     std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew);
-    std::string SendMoneyWithStealth(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew, ec_secret ephem_secret, bool fAskFee=false);
+    std::string SendMoneyWithStealth(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, ec_secret ephem_secret, bool fAskFee=false);
     std::string SendMoneyToDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew);
-    std::string SendMoneyToStealthDestination(const CTxDestination &address, int64 nValue, CWalletTx& wtxNew, ec_secret ephem_secret, bool fAskFee=false);
+    std::string SendMoneyToStealthDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew, ec_secret ephem_secret, bool fAskFee=false);
 
     bool NewKeyPool();
     bool TopUpKeyPool(unsigned int kpSize = 0);
@@ -903,7 +903,7 @@ public:
     std::string stealthAddress;
     std::vector<unsigned char> spendSecret;
     std::vector<unsigned char> scanSecret;
-    uint64 nEntryNo;
+    uint64_t nEntryNo;
 
     CStealthAddressEntry()
     {
@@ -938,7 +938,7 @@ class CStealthAddressWifEntry
 public:
     std::string wif;
     std::string stealthAddress;
-    uint64 nEntryNo;
+    uint64_t nEntryNo;
 
     CStealthAddressWifEntry()
     {

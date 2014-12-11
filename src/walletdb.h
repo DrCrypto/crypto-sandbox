@@ -117,7 +117,7 @@ public:
     bool EraseDestData(const std::string &address, const std::string &key);
 private:
     bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);
-    bool WriteStealthAddressEntry(const uint64 nStealthEntryNum, const CStealthAddressEntry& stealthAddress);
+    bool WriteStealthAddressEntry(const uint64_t nStealthEntryNum, const CStealthAddressEntry& stealthAddress);
 public:
     bool WriteAccountingEntry(const CAccountingEntry& acentry);
     int64_t GetAccountCreditDebit(const std::string& strAccount);

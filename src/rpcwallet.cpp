@@ -838,7 +838,7 @@ Value sendmany(const Array& params, bool fHelp)
         wtx.mapValue["comment"] = params[3].get_str();
 
     set<CBitcoinAddress> setAddress;
-    vector<pair<pair<pair<CScript, int64>, ec_secret>, bool>> vecSend;
+    vector<pair<pair<pair<CScript, int64_t>, ec_secret>, bool>> vecSend;
 
     int64_t totalAmount = 0;
     BOOST_FOREACH(const Pair& s, sendTo)
@@ -2081,7 +2081,7 @@ Value importstealthaddress(const Array& params, bool fHelp)
             LOCK2(cs_main, pwalletMain->cs_wallet);
 
             pwalletMain->MarkDirty();
-            pwalletMain->SetAddressBookName(vchAddress, strLabel);
+            pwalletMain->SetAddressBook(vchAddress, strLabel, "receive (SX)");
 
             if (!pwalletMain->AddKeyPubKey(key, pubkey))
                 throw JSONRPCError(RPC_WALLET_ERROR, "Error adding stealth address key to wallet");
@@ -2093,7 +2093,7 @@ Value importstealthaddress(const Array& params, bool fHelp)
 
     if(listImportSxWif.size() != 0){
         if (fRescan) {
-            pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
+            pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
             pwalletMain->ReacceptWalletTransactions();
         }
     }
@@ -2116,7 +2116,7 @@ Value sendtostealthaddress(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Vertcoin stealth address");
 
     // Amount
-    int64 nAmount = AmountFromValue(params[1]);
+    int64_t nAmount = AmountFromValue(params[1]);
 
     // Wallet comments
     CWalletTx wtx;
@@ -2218,7 +2218,7 @@ Value sendstealthfrom(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Vertcoin address");
 
 
-    int64 nAmount = AmountFromValue(params[2]);
+    int64_t nAmount = AmountFromValue(params[2]);
     int nMinDepth = 1;
     if (params.size() > 3)
         nMinDepth = params[3].get_int();
@@ -2235,7 +2235,7 @@ Value sendstealthfrom(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     // Check funds
-    int64 nBalance = GetAccountBalance(strAccount, nMinDepth);
+    int64_t nBalance = GetAccountBalance(strAccount, nMinDepth);
     if (nAmount > nBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Account has insufficient funds");
 

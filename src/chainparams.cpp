@@ -65,11 +65,11 @@ public:
         vSeeds.push_back(CDNSSeedData("darkcoin.io", "dnsseed.darkcoin.io"));
         vSeeds.push_back(CDNSSeedData("darkcoin.qa", "dnsseed.darkcoin.qa"));
 
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(76); // Darkcoin addresses start with X
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(5);
-        base58Prefixes[SECRET_KEY] =     list_of(204);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4);
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,76); // Darkcoin addresses start with X
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,204);
+        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 
         // Convert the pnSeeds array into usable address objects.
         for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
@@ -131,11 +131,11 @@ public:
         vSeeds.push_back(CDNSSeedData("darkcoin.io", "testnet-seed.darkcoin.io"));
         vSeeds.push_back(CDNSSeedData("darkcoin.qa", "testnet-seed.darkcoin.qa"));
 
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(138); // Testnet v4 addresses start with x
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(196);
-        base58Prefixes[SECRET_KEY]     = list_of(266);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x35)(0x87)(0xCF);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x35)(0x83)(0x94);
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,138); // Testnet v4 addresses start with x
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,266);
+        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
     }
     virtual Network NetworkID() const { return CChainParams::TESTNET; }
 };

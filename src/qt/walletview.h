@@ -71,9 +71,9 @@ public slots:
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
     /** Switch to receive coins page */
-    void gotoStealthAddressPage();
+    void gotoReceiveCoinsPage();
     /** Switch to stealth address page */
-    void gotoReceiveCoinsStealthPage();
+    void gotoStealthAddressPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage(QString addr = "");
 

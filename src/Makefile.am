@@ -57,6 +57,7 @@ BITCOIN_CORE_H = \
   rpcprotocol.h \
   rpcserver.h \
   script.h \
+  secp256k1.h \
   serialize.h \
   sph_blake.h \
   sph_bmw.h \
@@ -70,6 +71,7 @@ BITCOIN_CORE_H = \
   sph_simd.h \
   sph_skein.h \
   sph_types.h \
+  stealth.h \
   sync.h \
   threadsafety.h \
   tinyformat.h \
@@ -118,6 +120,7 @@ libbitcoin_server_a_SOURCES = \
   rpcnet.cpp \
   rpcrawtransaction.cpp \
   rpcserver.cpp \
+  stealth.cpp \
   txdb.cpp \
   txmempool.cpp \
   $(JSON_H) \

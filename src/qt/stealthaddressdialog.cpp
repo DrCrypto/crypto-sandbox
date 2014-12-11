@@ -140,7 +140,7 @@ void StealthAddressDialog::on_receiveButton_clicked()
         }
     } else {
         /* Generate new receiving address */
-        address = model->getAddressTableModel()->addRow(AddressTableModel::Receive, label, "");
+        address = model->getAddressTableModel()->addRow(AddressTableModel::Stealth, label, "");
     }
     SendCoinsRecipient info(address, label,
         ui->reqAmount->value(), ui->reqMessage->text());

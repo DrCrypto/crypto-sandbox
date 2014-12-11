@@ -260,7 +260,7 @@ void CWalletDB::ListStealthAddress(const string& strAccount, std::list<CStealthA
     if (!pcursor)
         throw runtime_error("CWalletDB::ListStealthAddress() : cannot create DB cursor");
     unsigned int fFlags = DB_SET_RANGE;
-    loop
+    while (true)
     {
         // Read next record
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
@@ -301,7 +301,7 @@ void CWalletDB::ListImportedSxWif(std::list<CStealthAddressWifEntry>& listImport
     if (!pcursor)
         throw runtime_error("CWalletDB::ListStealthAddress() : cannot create DB cursor");
     unsigned int fFlags = DB_SET_RANGE;
-    loop
+    while (true)
     {
         // Read next record
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);

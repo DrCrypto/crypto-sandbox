@@ -193,7 +193,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
 {
     qint64 total = 0;
     QList<SendCoinsRecipient> recipients = transaction.getRecipients();
-    std::vector<std::pair<std::pair<std::pair<CScript, int64>, ec_secret>, bool>> vecSend;
+    std::vector<std::pair<std::pair<std::pair<CScript, int64_t>, ec_secret>, bool>> vecSend;
     ec_secret ephem_secret;
 
     if(recipients.empty())
@@ -218,7 +218,9 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
                 subtotal += out.amount();
                 const unsigned char* scriptStr = (const unsigned char*)out.script().data();
                 CScript scriptPubKey(scriptStr, scriptStr+out.script().size());
-                vecSend.push_back(std::pair<CScript, int64_t>(scriptPubKey, out.amount()));
+                //vecSend.push_back(std::pair<CScript, int64_t>(scriptPubKey, out.amount()));
+                ec_secret ecSecretTmp;
+                vecSend.push_back(make_pair(make_pair(std::pair<CScript, int64_t>(scriptPubKey, out.amount()), ecSecretTmp), false));
 
             }
             if (subtotal <= 0)
@@ -505,7 +507,7 @@ static void NotifyAddressBookChanged(WalletModel *walletmodel, CWallet *wallet,
 
 static void NotifyStealthAddressBookChanged(WalletModel *walletmodel, CWallet *wallet, const std::string &address, const std::string &label)
 {
-    OutputDebugStringF("NotifyStealthAddressBookChanged %s %s \n", address.c_str(), label.c_str());
+    LogPrintf("NotifyStealthAddressBookChanged %s %s \n", address.c_str(), label.c_str());
     QMetaObject::invokeMethod(walletmodel, "updateAddressBook", Qt::QueuedConnection,
                               Q_ARG(QString, QString::fromStdString(address)),
                               Q_ARG(QString, QString::fromStdString(label)));

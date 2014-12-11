@@ -111,9 +111,9 @@ bool stealth_address::set_encoded(const std::string& encoded_address)
 ec_secret generate_random_secret()
 {
     using namespace boost::random;
-    random_device rd;
-    mt19937 generator(rd());
-    uniform_int_distribution<uint8_t> dist(0, std::numeric_limits<uint8_t>::max());
+    boost::random::random_device rd;
+    boost::random::mt19937 generator(rd());
+    boost::random::uniform_int_distribution<uint8_t> dist(0, std::numeric_limits<uint8_t>::max());
     ec_secret secret;
     for (uint8_t& byte: secret)
         byte = dist(generator);
@@ -123,7 +123,7 @@ ec_secret generate_random_secret()
 bool ec_multiply(ec_point& a, const ec_secret& b)
 {
     init.init();
-    return secp256k1_ecdsa_pubkey_tweak_mul(a.data(), a.size(), b.data());
+    return secp256k1_ec_pubkey_tweak_mul(a.data(), a.size(), b.data());
 }
 
 hash_digest sha256_hash(const data_chunk& chunk)
@@ -146,7 +146,7 @@ ec_secret shared_secret(const ec_secret& secret, ec_point point)
 bool ec_tweak_add(ec_point& a, const ec_secret& b)
 {
     init.init();
-    return secp256k1_ecdsa_pubkey_tweak_add(a.data(), a.size(), b.data());
+    return secp256k1_ec_pubkey_tweak_add(a.data(), a.size(), b.data());
 }
 
 ec_point secret_to_public_key(const ec_secret& secret,
@@ -159,7 +159,7 @@ ec_point secret_to_public_key(const ec_secret& secret,
 
     ec_point out(size);
     int out_size;
-    if (!secp256k1_ecdsa_pubkey_create(out.data(), &out_size, secret.data(),
+    if (!secp256k1_ec_pubkey_create(out.data(), &out_size, secret.data(),
             compressed))
         return ec_point();
     assert(size == static_cast<size_t>(out_size));
@@ -195,7 +195,8 @@ short_hash bitcoin_short_hash(const data_chunk& chunk)
 
 void set_public_key(payment_address& address, const data_chunk& public_key)
 {
-    address.set(fTestNet ? CBitcoinAddress::PUBKEY_ADDRESS_TEST : CBitcoinAddress::PUBKEY_ADDRESS,
+    //address.set(!(Params().NetworkID() == CChainParams::MAIN) ? CBitcoinAddress::PUBKEY_ADDRESS_TEST : CBitcoinAddress::PUBKEY_ADDRESS,
+    address.set(CChainParams::PUBKEY_ADDRESS,
         bitcoin_short_hash(public_key));
 }
 
@@ -277,7 +278,7 @@ ec_point uncover_stealth(
 bool ec_add(ec_secret& a, const ec_secret& b)
 {
     init.init();
-    return secp256k1_ecdsa_privkey_tweak_add(a.data(), b.data());
+    return secp256k1_ec_privkey_tweak_add(a.data(), b.data());
 }
 
 ec_secret uncover_stealth_secret(
@@ -296,7 +297,8 @@ std::string secret_to_wif(const ec_secret& secret, bool compressed)
     data_chunk data;
     data.reserve(1 + hash_size + 1 + 4);
 
-    data.push_back(fTestNet ? CBitcoinSecret::PRIVKEY_ADDRESS_TEST : CBitcoinSecret::PRIVKEY_ADDRESS);
+    //data.push_back(!(Params().NetworkID() == CChainParams::MAIN) ? CBitcoinSecret::PRIVKEY_ADDRESS_TEST : CBitcoinSecret::PRIVKEY_ADDRESS);
+    data.push_back(CChainParams::SCRIPT_ADDRESS);
     extend_data(data, secret);
     if (compressed)
         data.push_back(0x01);
