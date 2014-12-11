@@ -10,6 +10,7 @@ FORMS += \
     ../src/qt/forms/optionsdialog.ui \
     ../src/qt/forms/overviewpage.ui \
     ../src/qt/forms/receivecoinsdialog.ui \
+    ../src/qt/forms/stealthaddressdialog.ui \
     ../src/qt/forms/receiverequestdialog.ui \
     ../src/qt/forms/rpcconsole.ui \
     ../src/qt/forms/sendcoinsdialog.ui \

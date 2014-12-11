@@ -11,6 +11,7 @@ class BitcoinGUI;
 class ClientModel;
 class OverviewPage;
 class ReceiveCoinsDialog;
+class StealthAddressDialog;
 class SendCoinsDialog;
 class SendCoinsRecipient;
 class TransactionView;
@@ -57,6 +58,7 @@ private:
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
     ReceiveCoinsDialog *receiveCoinsPage;
+    StealthAddressDialog *stealthAddressPage;
     SendCoinsDialog *sendCoinsPage;
 
     TransactionView *transactionView;
@@ -69,7 +71,9 @@ public slots:
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
     /** Switch to receive coins page */
-    void gotoReceiveCoinsPage();
+    void gotoStealthAddressPage();
+    /** Switch to stealth address page */
+    void gotoReceiveCoinsStealthPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage(QString addr = "");
 

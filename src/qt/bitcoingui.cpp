@@ -248,6 +248,13 @@ void BitcoinGUI::createActions(bool fIsTestnet)
     historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
     tabGroup->addAction(historyAction);
 
+    stealthAddressAction = new QAction(QIcon(":/icons/stealth_addresses"), tr("&Stealth Addresses"), this);
+    stealthAddressAction->setStatusTip(tr("Show the list of stealth addresses for receiving payments"));
+    stealthAddressAction->setToolTip(stealthAddressAction->statusTip());
+    stealthAddressAction->setCheckable(true);
+    stealthAddressAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
+    tabGroup->addAction(stealthAddressAction);
+
     // These showNormalIfMinimized are needed because Send Coins and Receive Coins
     // can be triggered from the tray menu, and need to show the GUI to be useful.
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -258,6 +265,8 @@ void BitcoinGUI::createActions(bool fIsTestnet)
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
+    connect(stealthAddressAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(stealthAddressAction, SIGNAL(triggered()), this, SLOT(gotoStealthAddressPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setStatusTip(tr("Quit application"));
@@ -386,6 +395,7 @@ void BitcoinGUI::createToolBars()
         toolbar->addAction(overviewAction);
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
+        toolbar->addAction(stealthAddressAction);
         toolbar->addAction(historyAction);
         overviewAction->setChecked(true);
     }
@@ -459,6 +469,7 @@ void BitcoinGUI::setWalletActionsEnabled(bool enabled)
     usedSendingAddressesAction->setEnabled(enabled);
     usedReceivingAddressesAction->setEnabled(enabled);
     openAction->setEnabled(enabled);
+    stealthAddressAction->setEnabled(enabled);
 }
 
 void BitcoinGUI::createTrayIcon(bool fIsTestnet)
@@ -585,6 +596,12 @@ void BitcoinGUI::gotoReceiveCoinsPage()
     receiveCoinsAction->setChecked(true);
     if (walletFrame) walletFrame->gotoReceiveCoinsPage();
 }
+
+void BitcoinGUI::gotoStealthAddressPage()
+{
+    if (walletFrame) walletFrame->gotoStealthAddressPage();
+}
+
 
 void BitcoinGUI::gotoSendCoinsPage(QString addr)
 {

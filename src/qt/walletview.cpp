@@ -52,11 +52,13 @@ WalletView::WalletView(QWidget *parent):
     transactionsPage->setLayout(vbox);
 
     receiveCoinsPage = new ReceiveCoinsDialog();
+    stealthAddressPage = new StealthAddressDialog();
     sendCoinsPage = new SendCoinsDialog();
 
     addWidget(overviewPage);
     addWidget(transactionsPage);
     addWidget(receiveCoinsPage);
+    addWidget(stealthAddressPage);
     addWidget(sendCoinsPage);
 
     // Clicking on a transaction on the overview pre-selects the transaction on the transaction history page
@@ -111,6 +113,7 @@ void WalletView::setWalletModel(WalletModel *walletModel)
     transactionView->setModel(walletModel);
     overviewPage->setWalletModel(walletModel);
     receiveCoinsPage->setModel(walletModel);
+    stealthAddressPage->setModel(walletModel);
     sendCoinsPage->setModel(walletModel);
 
     if (walletModel)
@@ -163,6 +166,11 @@ void WalletView::gotoHistoryPage()
 void WalletView::gotoReceiveCoinsPage()
 {
     setCurrentWidget(receiveCoinsPage);
+}
+
+void WalletView::gotoStealthAddressPage()
+{
+    setCurrentWidget(stealthAddressPage);
 }
 
 void WalletView::gotoSendCoinsPage(QString addr)

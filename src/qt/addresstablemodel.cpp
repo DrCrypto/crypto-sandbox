@@ -15,12 +15,14 @@
 
 const QString AddressTableModel::Send = "S";
 const QString AddressTableModel::Receive = "R";
+const QString AddressTableModel::Stealth = "X";
 
 struct AddressTableEntry
 {
     enum Type {
         Sending,
         Receiving,
+        Stealth,
         Hidden /* QSortFilterProxyModel will filter these out */
     };
 
@@ -90,6 +92,17 @@ public:
                                   QString::fromStdString(strName),
                                   QString::fromStdString(address.ToString())));
             }
+
+            BOOST_FOREACH(const CStealthAddressEntry& item, wallet->listStealthAddress)
+            {
+                const std::string& address = item.stealthAddress;
+                const std::string& strAccount = item.strAccount;
+                cachedAddressTable.append(AddressTableEntry(AddressTableEntry::Stealth,
+                                  QString::fromStdString(strAccount),
+                                  QString::fromStdString(address)));
+
+            }
+
         }
         // qLowerBound() and qUpperBound() require our cachedAddressTable list to be sorted in asc order
         // Even though the map is already sorted this re-sorting step is needed because the originating map
@@ -143,6 +156,29 @@ public:
             break;
         }
     }
+
+    void updateEntry(const QString &address, const QString &label)
+    {
+        // Find address / label in model
+        QList<AddressTableEntry>::iterator lower = qLowerBound(
+            cachedAddressTable.begin(), cachedAddressTable.end(), address, AddressTableEntryLessThan());
+        QList<AddressTableEntry>::iterator upper = qUpperBound(
+            cachedAddressTable.begin(), cachedAddressTable.end(), address, AddressTableEntryLessThan());
+        int lowerIndex = (lower - cachedAddressTable.begin());
+        bool inModel = (lower != upper);
+        AddressTableEntry::Type newEntryType = AddressTableEntry::Stealth;
+
+        if(inModel)
+        {
+            OutputDebugStringF("Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model\n");
+        }else{
+            parent->beginInsertRows(QModelIndex(), lowerIndex, lowerIndex);
+            cachedAddressTable.insert(lowerIndex, AddressTableEntry(newEntryType, label, address));
+            parent->endInsertRows();
+        }
+
+    }
+
 
     int size()
     {
@@ -228,6 +264,8 @@ QVariant AddressTableModel::data(const QModelIndex &index, int role) const
             return Send;
         case AddressTableEntry::Receiving:
             return Receive;
+        case AddressTableEntry::Stealth:
+            return Stealth;
         default: break;
         }
     }
@@ -340,10 +378,20 @@ void AddressTableModel::updateEntry(const QString &address,
     priv->updateEntry(address, label, isMine, purpose, status);
 }
 
+
+void AddressTableModel::updateEntry(const QString &address, const QString &label)
+{
+    // Update stealth address book model from Bitcoin core
+    priv->updateEntry(address, label);
+}
+
+
+
 QString AddressTableModel::addRow(const QString &type, const QString &label, const QString &address)
 {
     std::string strLabel = label.toStdString();
     std::string strAddress = address.toStdString();
+    CStealthAddressEntry stealthAddressEntry;
 
     editStatus = OK;
 
@@ -385,6 +433,49 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con
         }
         strAddress = CBitcoinAddress(newKey.GetID()).ToString();
     }
+    else if(type == Stealth)
+    {
+        // Generate a new address to associate with given label
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+        if(!ctx.isValid())
+        {
+            // Unlock wallet failed or was cancelled
+            editStatus = WALLET_UNLOCK_FAILURE;
+            return QString();
+        }
+        if (strLabel == "*"){
+            editStatus = INVALID_ACCOUNT_NAME;
+            return QString();
+        }
+
+        ec_secret scan_secret = generate_random_secret();
+        ec_secret spend_secret = generate_random_secret();
+
+        std::vector<unsigned char> scanSecret;
+        std::vector<unsigned char> spendSecret;
+
+        for(unsigned int i=0; i<32; i++)
+        {
+            scanSecret.push_back(scan_secret[i]);
+            spendSecret.push_back(spend_secret[i]);
+        }
+
+        ec_point spend_pubkey = secret_to_public_key(spend_secret, true);
+
+        stealth_address addr;
+        addr.options = 0;
+        addr.scan_pubkey = secret_to_public_key(scan_secret, true);
+        addr.spend_pubkeys.push_back(spend_pubkey);
+        addr.number_signatures = 1;
+
+        stealthAddressEntry.strAccount = strLabel;
+        stealthAddressEntry.scanSecret = scanSecret;
+        stealthAddressEntry.spendSecret = spendSecret;
+        stealthAddressEntry.stealthAddress = addr.encoded();
+
+        strAddress = addr.encoded();
+
+    }
     else
     {
         return QString();
@@ -392,9 +483,14 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con
 
     // Add entry
     {
-        LOCK(wallet->cs_wallet);
-        wallet->SetAddressBook(CBitcoinAddress(strAddress).Get(), strLabel,
-                               (type == Send ? "send" : "receive"));
+        if(type != Stealth){
+            LOCK(wallet->cs_wallet);
+            wallet->SetAddressBook(CBitcoinAddress(strAddress).Get(), strLabel,
+                                   (type == Send ? "send" : "receive"));
+        } else{
+            LOCK(wallet->cs_wallet);
+            wallet->SetStealthAddressBook(stealthAddressEntry);
+        }
     }
     return QString::fromStdString(strAddress);
 }
@@ -450,3 +546,25 @@ void AddressTableModel::emitDataChanged(int idx)
 {
     emit dataChanged(index(idx, 0, QModelIndex()), index(idx, columns.length()-1, QModelIndex()));
 }
+
+void AddressTableModel::importStealthAddress()
+{
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+    if(!ctx.isValid())
+    {
+        return ;
+    }
+    wallet->ImportStealthAddress();
+}
+
+void AddressTableModel::resetPrivateKeysStatus()
+{
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+    if(!ctx.isValid())
+    {
+        return ;
+    }
+    wallet->ResetPrivateKeysStatus();
+}
+
+

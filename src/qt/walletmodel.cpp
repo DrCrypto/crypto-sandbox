@@ -157,17 +157,44 @@ void WalletModel::updateAddressBook(const QString &address, const QString &label
         addressTableModel->updateEntry(address, label, isMine, purpose, status);
 }
 
-bool WalletModel::validateAddress(const QString &address)
+void WalletModel::updateAddressBook(const QString &address, const QString &label)
 {
-    CBitcoinAddress addressParsed(address.toStdString());
-    return addressParsed.IsValid();
+    if(addressTableModel)
+        addressTableModel->updateEntry(address, label);
+}
+
+bool WalletModel::validateAddress(const QString &address, bool supportStealthAddress)
+{
+    bool result = false;
+
+    if(supportStealthAddress)
+    {
+        if(address.toStdString().length() < 40){ // careful if the address length changes!
+            // check regular address
+            CBitcoinAddress addressParsed(address.toStdString());
+            result = addressParsed.IsValid();
+        }else{
+            // check stealth address
+            stealth_address stealthAddress;
+            result = stealthAddress.set_encoded(address.toStdString());
+        }
+    }else{
+        // check regular address
+        CBitcoinAddress addressParsed(address.toStdString());
+        result = addressParsed.IsValid();
+    }
+
+
+
+    return result;
 }
 
 WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransaction &transaction, const CCoinControl *coinControl)
 {
     qint64 total = 0;
     QList<SendCoinsRecipient> recipients = transaction.getRecipients();
-    std::vector<std::pair<CScript, int64_t> > vecSend;
+    std::vector<std::pair<std::pair<std::pair<CScript, int64>, ec_secret>, bool>> vecSend;
+    ec_secret ephem_secret;
 
     if(recipients.empty())
     {
@@ -192,6 +219,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
                 const unsigned char* scriptStr = (const unsigned char*)out.script().data();
                 CScript scriptPubKey(scriptStr, scriptStr+out.script().size());
                 vecSend.push_back(std::pair<CScript, int64_t>(scriptPubKey, out.amount()));
+
             }
             if (subtotal <= 0)
             {
@@ -201,7 +229,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
         }
         else
         {   // User-entered bitcoin address / amount:
-            if(!validateAddress(rcp.address))
+            if(!validateAddress(rcp.address), true)
             {
                 return InvalidAddress;
             }
@@ -212,10 +240,50 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
             setAddress.insert(rcp.address);
             ++nAddresses;
 
-            CScript scriptPubKey;
-            scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
-            vecSend.push_back(std::pair<CScript, int64_t>(scriptPubKey, rcp.amount));
+            //CScript scriptPubKey;
+            //scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
+            //vecSend.push_back(std::pair<CScript, int64_t>(scriptPubKey, rcp.amount));
 
+            if(rcp.address.toStdString().length() < 40){
+                ec_secret ecSecretTmp;
+                CScript scriptPubKey;
+                scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
+                vecSend.push_back(make_pair(make_pair(std::pair<CScript, int64_t>(scriptPubKey, rcp.amount), ecSecretTmp), false));
+            } else{
+                stealth_address recv;
+                recv.set_encoded(rcp.address.toStdString());
+                // stealth address
+                bool reuse_key = recv.options & stealth_address::reuse_key_option;
+                // Get our scan and spend pubkeys.
+                const ec_point& recv_scan_pubkey = recv.scan_pubkey;
+                //spend_pubkey = scan_pubkey;
+                ec_point recv_spend_pubkey;
+                if (!reuse_key)
+                    recv_spend_pubkey = recv.spend_pubkeys.front();
+                // Do stealth stuff.
+                ephem_secret = generate_random_secret();
+    
+                std::vector<unsigned char> ephemSecret;
+                for(unsigned int i = 0; i < 32 ; i++)
+                {
+                    ephemSecret.push_back(ephem_secret[i]);
+                }
+    
+                ec_point addr_pubkey = initiate_stealth(
+                    ephem_secret, recv_scan_pubkey, recv_spend_pubkey);
+                ec_point ephem_pubkey = secret_to_public_key(ephem_secret, true);
+    
+                CPubKey ephemPubKey;
+                ephemPubKey.Set(ephem_pubkey.begin(),ephem_pubkey.end());
+                // Generate the address.
+                payment_address payaddr;
+                set_public_key(payaddr, addr_pubkey);
+                std::string payAddrEncoded = payaddr.encoded();
+    
+                CScript scriptPubKey;
+                scriptPubKey.SetDestination(CBitcoinAddress(payAddrEncoded).Get());
+                vecSend.push_back(make_pair(make_pair(std::pair<CScript, int64_t>(scriptPubKey, rcp.amount), ephem_secret), true));
+            }
             total += rcp.amount;
         }
     }
@@ -301,24 +369,27 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran
     foreach(const SendCoinsRecipient &rcp, transaction.getRecipients())
     {
         // Don't touch the address book when we have a payment request
-        if (!rcp.paymentRequest.IsInitialized())
-        {
-            std::string strAddress = rcp.address.toStdString();
-            CTxDestination dest = CBitcoinAddress(strAddress).Get();
-            std::string strLabel = rcp.label.toStdString();
+
+        if(rcp.address.toStdString().length() < 40){
+            if (!rcp.paymentRequest.IsInitialized())
             {
-                LOCK(wallet->cs_wallet);
-
-                std::map<CTxDestination, CAddressBookData>::iterator mi = wallet->mapAddressBook.find(dest);
-
-                // Check if we have a new address or an updated label
-                if (mi == wallet->mapAddressBook.end())
+                std::string strAddress = rcp.address.toStdString();
+                CTxDestination dest = CBitcoinAddress(strAddress).Get();
+                std::string strLabel = rcp.label.toStdString();
                 {
-                    wallet->SetAddressBook(dest, strLabel, "send");
-                }
-                else if (mi->second.name != strLabel)
-                {
-                    wallet->SetAddressBook(dest, strLabel, ""); // "" means don't change purpose
+                    LOCK(wallet->cs_wallet);
+
+                    std::map<CTxDestination, CAddressBookData>::iterator mi = wallet->mapAddressBook.find(dest);
+
+                    // Check if we have a new address or an updated label
+                    if (mi == wallet->mapAddressBook.end())
+                    {
+                        wallet->SetAddressBook(dest, strLabel, "send");
+                    }
+                    else if (mi->second.name != strLabel)
+                    {
+                        wallet->SetAddressBook(dest, strLabel, ""); // "" means don't change purpose
+                    }
                 }
             }
         }
@@ -432,6 +503,17 @@ static void NotifyAddressBookChanged(WalletModel *walletmodel, CWallet *wallet,
                               Q_ARG(int, status));
 }
 
+static void NotifyStealthAddressBookChanged(WalletModel *walletmodel, CWallet *wallet, const std::string &address, const std::string &label)
+{
+    OutputDebugStringF("NotifyStealthAddressBookChanged %s %s \n", address.c_str(), label.c_str());
+    QMetaObject::invokeMethod(walletmodel, "updateAddressBook", Qt::QueuedConnection,
+                              Q_ARG(QString, QString::fromStdString(address)),
+                              Q_ARG(QString, QString::fromStdString(label)));
+}
+
+
+
+
 // queue notifications to show a non freezing progress dialog e.g. for rescan
 static bool fQueueNotifications = false;
 static std::vector<std::pair<uint256, ChangeType> > vQueueNotifications;
@@ -476,6 +558,7 @@ void WalletModel::subscribeToCoreSignals()
     wallet->NotifyStatusChanged.connect(boost::bind(&NotifyKeyStoreStatusChanged, this, _1));
     wallet->NotifyAddressBookChanged.connect(boost::bind(NotifyAddressBookChanged, this, _1, _2, _3, _4, _5, _6));
     wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
+    wallet->NotifyStealthAddressBookChanged.connect(boost::bind(NotifyStealthAddressBookChanged, this, _1, _2, _3));
     wallet->ShowProgress.connect(boost::bind(ShowProgress, this, _1, _2));
 }
 
@@ -485,6 +568,8 @@ void WalletModel::unsubscribeFromCoreSignals()
     wallet->NotifyStatusChanged.disconnect(boost::bind(&NotifyKeyStoreStatusChanged, this, _1));
     wallet->NotifyAddressBookChanged.disconnect(boost::bind(NotifyAddressBookChanged, this, _1, _2, _3, _4, _5, _6));
     wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
+
+    wallet->NotifyStealthAddressBookChanged.disconnect(boost::bind(NotifyStealthAddressBookChanged, this, _1, _2, _3));
     wallet->ShowProgress.disconnect(boost::bind(ShowProgress, this, _1, _2));
 }
 

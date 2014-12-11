@@ -33,6 +33,7 @@ static const int64_t DEFAULT_TRANSACTION_FEE = 0;
 // -paytxfee will warn if called with a higher fee than this amount (in satoshis) per KB
 static const int nHighTransactionFeeWarning = 0.01 * COIN;
 
+class CStealthAddressEntry;
 class CAccountingEntry;
 class CCoinControl;
 class COutput;
@@ -172,8 +173,12 @@ public:
     std::map<uint256, int> mapRequestCount;
 
     std::map<CTxDestination, CAddressBookData> mapAddressBook;
+    std::list<CStealthAddressEntry> listStealthAddress;
 
     CPubKey vchDefaultKey;
+
+    std::vector<unsigned char> scanSecret;
+    std::vector<unsigned char> spendSecret;
 
     std::set<COutPoint> setLockedCoins;
 
@@ -194,6 +199,10 @@ public:
     void UnlockCoin(COutPoint& output);
     void UnlockAllCoins();
     void ListLockedCoins(std::vector<COutPoint>& vOutpts);
+
+    void ImportStealthAddress();
+    void ResetPrivateKeysStatus();
+    void NewStealthAddress(const CStealthAddressEntry& stealthAddressEntry);
 
     // keystore implementation
     // Generate a new key
@@ -254,13 +263,15 @@ public:
     int64_t GetBalance() const;
     int64_t GetUnconfirmedBalance() const;
     int64_t GetImmatureBalance() const;
-    bool CreateTransaction(const std::vector<std::pair<CScript, int64_t> >& vecSend,
+    bool CreateTransaction(const std::vector<std::pair<std::pair<std::pair<CScript, int64>, ec_secret>, bool>>& vecSend,
                            CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
-    bool CreateTransaction(CScript scriptPubKey, int64_t nValue,
-                           CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
+    bool CreateTransaction(CScript scriptPubKey, int64 nValue, bool isStealthAddressTx,
+                           CWalletTx& wtxNew, CReserveKey& reservekey, int64& nFeeRet, std::string& strFailReason, ec_secret ecSecret, const CCoinControl *coinControl=NULL);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
     std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew);
+    std::string SendMoneyWithStealth(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew, ec_secret ephem_secret, bool fAskFee=false);
     std::string SendMoneyToDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew);
+    std::string SendMoneyToStealthDestination(const CTxDestination &address, int64 nValue, CWalletTx& wtxNew, ec_secret ephem_secret, bool fAskFee=false);
 
     bool NewKeyPool();
     bool TopUpKeyPool(unsigned int kpSize = 0);
@@ -347,6 +358,8 @@ public:
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);
 
+    bool SetStealthAddressBook(const CStealthAddressEntry& stealthAddressEntry);
+
     bool DelAddressBook(const CTxDestination& address);
 
     void UpdatedTransaction(const uint256 &hashTx);
@@ -388,6 +401,11 @@ public:
             &address, const std::string &label, bool isMine,
             const std::string &purpose,
             ChangeType status)> NotifyAddressBookChanged;
+
+    /** Stealth Address book entry changed.
+     * @note called with lock cs_wallet held.
+     */
+    boost::signals2::signal<void (CWallet *wallet, const std::string &address, const std::string &label)> NotifyStealthAddressBookChanged;
 
     /** Wallet transaction added, removed or updated.
      * @note called with lock cs_wallet held.
@@ -871,5 +889,80 @@ public:
 private:
     std::vector<char> _ssExtra;
 };
+
+
+
+
+/** Stealth Address
+ * Database key is stealth<stealthaddress>.
+ */
+class CStealthAddressEntry
+{
+public:
+    std::string strAccount;
+    std::string stealthAddress;
+    std::vector<unsigned char> spendSecret;
+    std::vector<unsigned char> scanSecret;
+    uint64 nEntryNo;
+
+    CStealthAddressEntry()
+    {
+        SetNull();
+    }
+
+    void SetNull()
+    {
+        strAccount.clear();
+        stealthAddress.clear();
+        spendSecret.clear();
+        scanSecret.clear();
+    }
+
+    IMPLEMENT_SERIALIZE
+    (
+        CStealthAddressEntry& me = *const_cast<CStealthAddressEntry*>(this);
+        if (!(nType & SER_GETHASH))
+            READWRITE(nVersion);
+        // Note: strAccount is serialized as part of the key, not here.
+        READWRITE(stealthAddress);
+        READWRITE(spendSecret);
+        READWRITE(scanSecret);
+    )
+};
+
+
+/** Stealth WIF
+ */
+class CStealthAddressWifEntry
+{
+public:
+    std::string wif;
+    std::string stealthAddress;
+    uint64 nEntryNo;
+
+    CStealthAddressWifEntry()
+    {
+        SetNull();
+    }
+
+    void SetNull()
+    {
+        wif.clear();
+        stealthAddress.clear();
+    }
+
+    IMPLEMENT_SERIALIZE
+    (
+        CStealthAddressWifEntry& me = *const_cast<CStealthAddressWifEntry*>(this);
+        if (!(nType & SER_GETHASH))
+            READWRITE(nVersion);
+        READWRITE(wif);
+        READWRITE(stealthAddress);
+    )
+};
+
+
+
+
 
 #endif

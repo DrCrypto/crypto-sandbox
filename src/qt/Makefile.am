@@ -201,6 +201,7 @@ BITCOIN_QT_H = \
   sendcoinsentry.h \
   signverifymessagedialog.h \
   splashscreen.h \
+  stealth.h \
   trafficgraphwidget.h \
   transactiondesc.h \
   transactiondescdialog.h \
@@ -278,6 +279,7 @@ BITCOIN_QT_CPP = \
   qvaluecombobox.cpp \
   rpcconsole.cpp \
   splashscreen.cpp \
+  stealth.cpp \
   trafficgraphwidget.cpp \
   utilitydialog.cpp \
   winshutdownmonitor.cpp

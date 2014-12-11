@@ -3,6 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+
 #include "walletdb.h"
 
 #include "base58.h"
@@ -19,6 +21,7 @@ using namespace boost;
 
 
 static uint64_t nAccountingEntryNumber = 0;
+static uint64_t nStealthAddressEntryNumber = 0;
 
 //
 // CWalletDB
@@ -178,6 +181,22 @@ bool CWalletDB::WriteAccountingEntry(const CAccountingEntry& acentry)
     return WriteAccountingEntry(++nAccountingEntryNumber, acentry);
 }
 
+bool CWalletDB::WriteStealthAddressEntry(const uint64_t nStealthEntryNum, const CStealthAddressEntry& stealthAddress)
+{
+    return Write(boost::make_tuple(string("stealth"), stealthAddress.strAccount, nStealthEntryNum), stealthAddress);
+}
+
+bool CWalletDB::WriteStealthAddressEntry(const CStealthAddressEntry& stealthAddress)
+{
+    return WriteStealthAddressEntry(++nStealthAddressEntryNumber, stealthAddress);
+}
+
+bool CWalletDB::WriteImportedSxWifEntry(const CStealthAddressWifEntry& importedSxTx, bool isImported)
+{
+    return Write(boost::make_tuple(string("wifsx"), importedSxTx.wif, importedSxTx.stealthAddress), isImported);
+}
+
+
 int64_t CWalletDB::GetAccountCreditDebit(const string& strAccount)
 {
     list<CAccountingEntry> entries;
@@ -233,6 +252,97 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin
     pcursor->close();
 }
 
+void CWalletDB::ListStealthAddress(const string& strAccount, std::list<CStealthAddressEntry>& listStealthAddress)
+{
+    bool fAllAccounts = (strAccount == "*");
+
+    Dbc* pcursor = GetCursor();
+    if (!pcursor)
+        throw runtime_error("CWalletDB::ListStealthAddress() : cannot create DB cursor");
+    unsigned int fFlags = DB_SET_RANGE;
+    loop
+    {
+        // Read next record
+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        if (fFlags == DB_SET_RANGE)
+            ssKey << boost::make_tuple(string("stealth"), (fAllAccounts? string("") : strAccount), uint64_t(0));
+        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        fFlags = DB_NEXT;
+        if (ret == DB_NOTFOUND)
+            break;
+        else if (ret != 0)
+        {
+            pcursor->close();
+            throw runtime_error("CWalletDB::ListStealthAddress() : error scanning DB");
+        }
+
+        // Unserialize
+        string strType;
+        ssKey >> strType;
+        if (strType != "stealth")
+            break;
+        CStealthAddressEntry stealthAddress;
+        ssKey >> stealthAddress.strAccount;
+        if (!fAllAccounts && stealthAddress.strAccount != strAccount)
+            break;
+
+        ssValue >> stealthAddress;
+        ssKey >> stealthAddress.nEntryNo;
+        listStealthAddress.push_back(stealthAddress);
+    }
+
+    pcursor->close();
+}
+
+void CWalletDB::ListImportedSxWif(std::list<CStealthAddressWifEntry>& listImportedSxWif, bool isImported)
+{
+    Dbc* pcursor = GetCursor();
+    if (!pcursor)
+        throw runtime_error("CWalletDB::ListStealthAddress() : cannot create DB cursor");
+    unsigned int fFlags = DB_SET_RANGE;
+    loop
+    {
+        // Read next record
+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        if (fFlags == DB_SET_RANGE)
+            ssKey << boost::make_tuple(string("wifsx"), string(""), string(""));
+        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        fFlags = DB_NEXT;
+        if (ret == DB_NOTFOUND)
+            break;
+        else if (ret != 0)
+        {
+            pcursor->close();
+            throw runtime_error("CWalletDB::ListImportedWif() : error scanning DB");
+        }
+
+        // Unserialize
+        string strType;
+        ssKey >> strType;
+        if (strType != "wifsx")
+            break;
+
+        string strWif;
+        ssKey >> strWif;
+
+        string strStealthAddress;
+        ssKey >> strStealthAddress;
+
+        bool strValue;
+        ssValue >> strValue;
+        if (isImported != strValue)
+            break;
+
+        CStealthAddressWifEntry item;
+        item.wif = strWif;
+        item.stealthAddress = strStealthAddress;
+        listImportedSxWif.push_back(item);
+    }
+
+    pcursor->close();
+}
 
 DBErrors
 CWalletDB::ReorderTransactions(CWallet* pwallet)
@@ -403,6 +513,18 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                 if (acentry.nOrderPos == -1)
                     wss.fAnyUnordered = true;
             }
+        }
+        else if (strType == "stealth")
+        {
+            CStealthAddressEntry stealthAddress;
+            ssValue >> stealthAddress;
+            ssKey >> stealthAddress.strAccount;
+            uint64_t nNumber;
+            ssKey >> nNumber;
+            if (nNumber > nStealthAddressEntryNumber)
+                nStealthAddressEntryNumber = nNumber;
+            pwallet->listStealthAddress.push_back(stealthAddress);
+
         }
         else if (strType == "key" || strType == "wkey")
         {

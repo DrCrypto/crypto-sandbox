@@ -123,7 +123,11 @@ void SendCoinsDialog::on_sendButton_clicked()
         {
             if(entry->validate())
             {
-                recipients.append(entry->getValue());
+                SendCoinsRecipient sxRecipient = entry->getValue();
+                    if(sxRecipient.address.length() > 40){ // may need some adjustment...
+                        sxRecipient.label = sxRecipient.address;
+                    }
+                recipients.append(sxRecipient);
             }
             else
             {

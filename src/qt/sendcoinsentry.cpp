@@ -119,7 +119,7 @@ bool SendCoinsEntry::validate()
     if (recipient.paymentRequest.IsInitialized())
         return retval;
 
-    if (!model->validateAddress(ui->payTo->text()))
+    if (!model->validateAddress(ui->payTo->text(), true))
     {
         ui->payTo->setValid(false);
         retval = false;

@@ -24,6 +24,8 @@ class CWallet;
 class CWalletTx;
 class uint160;
 class uint256;
+class CStealthAddressEntry;
+class CStealthAddressWifEntry;
 
 /** Error statuses for the wallet database */
 enum DBErrors
@@ -115,10 +117,15 @@ public:
     bool EraseDestData(const std::string &address, const std::string &key);
 private:
     bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);
+    bool WriteStealthAddressEntry(const uint64 nStealthEntryNum, const CStealthAddressEntry& stealthAddress);
 public:
     bool WriteAccountingEntry(const CAccountingEntry& acentry);
     int64_t GetAccountCreditDebit(const std::string& strAccount);
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);
+    bool WriteStealthAddressEntry(const CStealthAddressEntry& stealthAddress);
+    void ListStealthAddress(const std::string& strAccount, std::list<CStealthAddressEntry>& listStealthAddress);
+    bool WriteImportedSxWifEntry(const CStealthAddressWifEntry& importedSxTx, bool isImported);
+    void ListImportedSxWif(std::list<CStealthAddressWifEntry>& listImportedWif, bool isImported);
 
     DBErrors ReorderTransactions(CWallet*);
     DBErrors LoadWallet(CWallet* pwallet);
